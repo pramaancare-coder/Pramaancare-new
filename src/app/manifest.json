@@ -1,0 +1,16 @@
+{
+  "name": "Pramaan Care",
+  "short_name": "Pramaan Care",
+  "description": "Professional Mental Health & Counseling Services",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/images/Fevicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
