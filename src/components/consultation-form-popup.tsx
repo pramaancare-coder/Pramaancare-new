@@ -1,11 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState, startTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { consultationFormSchema, type ConsultationFormValues } from "@/lib/schemas";
-import { handleContactForm } from "@/app/actions";
+import { createWeb3FormData } from "@/lib/web3form";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -29,17 +28,16 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Loader2, PartyPopper, Calendar, Video, MapPin } from "lucide-react";
 
-function SubmitButton() {
-  const { pending } = useFormStatus();
+function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
   return (
     <Button 
         type="submit" 
         size="lg"
-        disabled={pending} 
+        disabled={isSubmitting} 
         className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full px-8 w-full"
         aria-label="Submit Form"
     >
-      {pending ? (
+      {isSubmitting ? (
         <Loader2 className="h-5 w-5 animate-spin" />
       ) : (
         "Schedule Consultation"
@@ -70,13 +68,10 @@ interface ConsultationFormProps {
 
 export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' }: ConsultationFormProps) {
   const { toast } = useToast();
-  const formRef = useRef<HTMLFormElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-
-  const [formState, formAction] = useActionState(handleContactForm, {
-    success: false,
-    message: "",
-  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formData, setFormData] = useState<ConsultationFormValues | null>(null);
 
   const form = useForm<ConsultationFormValues>({
     resolver: zodResolver(consultationFormSchema),
@@ -90,41 +85,52 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
     },
   });
 
-  useEffect(() => {
-    if (formState.message) {
-      if (formState.success) {
-        // Don't show toast for success, we'll show it in the dialog
-        // Keep dialog open to show success message
-        setIsOpen(true);
-      } else {
-         // Only show toast for general server errors, not validation errors
-        if (formState.message.startsWith("Invalid form data")) return;
-        toast({
-          title: "Error",
-          description: formState.message,
-          variant: "destructive",
-        });
-      }
-    }
-  }, [formState, toast]);
-
-  const onFormSubmit = (data: ConsultationFormValues) => {
-    const formData = new FormData();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value) {
-        formData.append(key, String(value));
-      }
-    });
+  const onFormSubmit = async (data: ConsultationFormValues) => {
+    setIsSubmitting(true);
     
-    // Use startTransition to avoid the warning
-    startTransition(() => {
-      formAction(formData);
-    });
+    try {
+      const web3FormData = createWeb3FormData(data, {
+        formType: 'consultation',
+        submissionTime: new Date().toISOString(),
+        source: variant === 'popup' ? 'consultation-popup' : 'consultation-inline'
+      });
+
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        body: web3FormData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setFormData(data);
+        setFormSubmitted(true);
+        toast({
+          title: "Success!",
+          description: "Your consultation request has been sent successfully. We will contact you shortly.",
+        });
+        if (variant === 'popup') {
+          setIsOpen(true);
+        }
+      } else {
+        throw new Error(result.message || 'Form submission failed');
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const resetForm = () => {
-    // Reload page to reset all form state
-    window.location.reload();
+    setFormSubmitted(false);
+    setFormData(null);
+    form.reset();
   };
 
   // Popup variant - render success or form content within Dialog
@@ -135,7 +141,7 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
           {trigger}
         </DialogTrigger>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-          {formState.success ? (
+          {formSubmitted && formData ? (
             // Success state
             <>
               <DialogHeader>
@@ -151,13 +157,13 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
                   <p className="text-sm lg:text-base xl:text-lg">
                     Your consultation request has been submitted. <strong>We will contact you shortly</strong> to confirm your preferred time and consultation details.
                   </p>
+                  <div className="flex justify-center mt-4">
+                    <Button onClick={resetForm} variant="outline">
+                      Schedule Another Consultation
+                    </Button>
+                  </div>
                 </AlertDescription>
               </Alert>
-              <div className="flex justify-center mt-4">
-                <Button onClick={resetForm} variant="outline">
-                  Schedule Another Consultation
-                </Button>
-              </div>
             </>
           ) : (
             // Form state
@@ -175,7 +181,6 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
               <div className="w-full">
                 <Form {...form}>
                   <form
-                      ref={formRef}
                       onSubmit={form.handleSubmit(onFormSubmit)}
                       className="space-y-4"
                       noValidate
@@ -290,7 +295,7 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
                     />
                     
                     <div className="flex justify-center mt-6">
-                      <SubmitButton />
+                      <SubmitButton isSubmitting={isSubmitting} />
                     </div>
                 </form>
               </Form>
@@ -303,7 +308,7 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
   }
 
   // Inline variant - show success or form
-  if (formState.success) {
+  if (formSubmitted && formData) {
     return (
       <div className="space-y-6">
         <Alert className="bg-card">
@@ -331,7 +336,6 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
       <div className="w-full">
         <Form {...form}>
           <form
-              ref={formRef}
               onSubmit={form.handleSubmit(onFormSubmit)}
               className="space-y-6"
               noValidate
@@ -451,7 +455,7 @@ export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' 
             />
             
             <div className="flex justify-center mt-6">
-              <SubmitButton />
+              <SubmitButton isSubmitting={isSubmitting} />
             </div>
           </form>
         </Form>
