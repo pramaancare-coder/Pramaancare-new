@@ -144,7 +144,7 @@ export function ContactForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormControl>
-                    <Input {...field} placeholder="First Name" required className="h-12 rounded-full" />
+                    <Input {...field} placeholder="First Name" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -156,7 +156,7 @@ export function ContactForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormControl>
-                    <Input {...field} placeholder="Last Name" required className="h-12 rounded-full" />
+                    <Input {...field} placeholder="Last Name" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -171,7 +171,7 @@ export function ContactForm() {
                   render={({ field }) => (
                   <FormItem>
                       <FormControl>
-                      <Input {...field} placeholder="Email" type="email" required className="h-12 rounded-full" />
+                      <Input {...field} placeholder="Email" type="email" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
                       </FormControl>
                       <FormMessage />
                   </FormItem>
@@ -183,7 +183,7 @@ export function ContactForm() {
                   render={({ field }) => (
                   <FormItem>
                       <FormControl>
-                      <Input {...field} placeholder="Phone Number" type="tel" required className="h-12 rounded-full" />
+                      <Input {...field} placeholder="Phone Number" type="tel" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
                       </FormControl>
                       <FormMessage />
                   </FormItem>
