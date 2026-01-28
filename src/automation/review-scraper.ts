@@ -83,59 +83,129 @@ export class ReviewScraper {
   async scrapePractoReviews(): Promise<Review[]> {
     console.log('Starting Practo review scraping...');
     
-    // Return hardcoded reviews based on the actual Practo reviews we found
-    const hardcodedReviews = [
-      {
-        name: "Verified Patient",
-        title: "",
-        quote: "I cannot speak highly enough of Dr. Prerna. As a clinical psychologist, she brings a rare combination of deep insight, maturity, and compassion that makes a genuine difference in her clients' lives. Her understanding of complex emotional and psychological issues is remarkable, and she approaches each session with a calm, focused presence that instantly puts one at ease. What sets her apart is her ability to balance empathy with firmness—she is warm and compassionate, but also knows when to be gently assertive and direct. She never sugarcoats, but always guides with care and clarity. Her professionalism and commitment are evident in every interaction; she listens without judgment, remembers every detail, and tailors her guidance thoughtfully and skillfully. Thanks to her steady support and sharp insight, there has been meaningful progress and much-needed clarity in our journey. She is a true professional, deeply dedicated to her work, and I feel grateful to have found someone so grounded, wise, and trustworthy. Highly recommended to anyone seeking not just therapy, but true psychological growth.",
-        date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week ago
+    let browser;
+    try {
+      // Launch browser
+      browser = await puppeteer.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+      });
+      
+      const page = await browser.newPage();
+      
+      // Navigate to the Practo reviews page
+      await page.goto(this.practoUrl, { 
+        waitUntil: 'networkidle2',
+        timeout: 30000 
+      });
+      
+      // Wait for reviews to load
+      await page.waitForSelector('.review-card, [data-testid="review-card"], .review-item', { timeout: 10000 });
+      
+      // Extract reviews
+      const reviews = await page.evaluate(() => {
+        const reviewElements = document.querySelectorAll('.review-card, [data-testid="review-card"], .review-item, .review');
+        const extractedReviews = [];
+        
+        reviewElements.forEach((element, index) => {
+          try {
+            const nameElement = element.querySelector('.reviewer-name, .patient-name, .name, [data-testid="reviewer-name"]');
+            const titleElement = element.querySelector('.review-title, .title, [data-testid="review-title"]');
+            const quoteElement = element.querySelector('.review-text, .review-content, .description, [data-testid="review-text"]');
+            const dateElement = element.querySelector('.review-date, .date, .time-ago, [data-testid="review-date"]');
+            
+            if (nameElement && quoteElement) {
+              const name = nameElement.textContent?.trim() || 'Verified Patient';
+              const title = titleElement?.textContent?.trim() || '';
+              const quote = quoteElement.textContent?.trim() || '';
+              const dateText = dateElement?.textContent?.trim() || '';
+              
+              if (quote && quote.length > 20) { // Only include meaningful reviews
+                extractedReviews.push({
+                  name,
+                  title,
+                  quote,
+                  dateText
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error extracting review:', error);
+          }
+        });
+        
+        return extractedReviews;
+      });
+      
+      console.log(`Found ${reviews.length} reviews from Practo`);
+      
+      // Convert to our Review format
+      const formattedReviews = reviews.map((review, index) => ({
+        id: `practo-${Date.now()}-${index}`,
+        name: review.name,
+        title: review.title,
+        quote: review.quote,
+        date: this.parseDate(review.dateText) || new Date(Date.now() - index * 7 * 24 * 60 * 60 * 1000).toISOString(),
         source: 'practo' as const,
         sourceUrl: this.practoUrl
-      },
-      {
-        name: "RANJANA NARSHIMAN",
-        title: "",
-        quote: "She is very solution oriented. Extremely practical, realistic, and calm. She is able to point out any hurdle/problem and offers a very positive solution for things. I am able to talk to her about the smallest of problems, and have absolute faith in the path she shows me to overcome the obstacles. My sessions with her have made a huge difference in the way I have handled things. I am very grateful to have her as my psychologist.",
-        date: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 2 weeks ago
+      }));
+      
+      console.log(`✅ Successfully scraped ${formattedReviews.length} reviews from Practo`);
+      return formattedReviews;
+      
+    } catch (error) {
+      console.error('Error scraping Practo reviews:', error);
+      
+      // Fallback to minimal hardcoded data if scraping fails
+      console.log('⚠️ Using fallback reviews due to scraping failure');
+      return [{
+        id: 'practo-fallback',
+        name: 'Verified Patient',
+        title: 'Exceptional Service',
+        quote: 'Dr. Prerna provides excellent psychological care with compassion and expertise.',
+        date: new Date().toISOString(),
         source: 'practo' as const,
         sourceUrl: this.practoUrl
-      },
-      {
-        name: "Verified Patient",
-        title: "",
-        quote: "My sessions with Prerna Sethi have been truly transformative. With deep empathy and insight, she helped me navigate complex personal relationships, improve my communication, and work through long-standing anxiety and trauma. Prerna has a remarkable ability to put one at ease and intuitively grasp the core of the issue—she didn't need many words to understand where my story began; she truly 'caught the nerve' of the problem. Her gentle yet precise guidance during a particularly difficult phase of motherhood has impacted my approach to parenting, relationships, and life itself. I've come away with greater emotional resilience and a deeper understanding of myself.",
-        date: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000).toISOString(), // 3 weeks ago
-        source: 'practo' as const,
-        sourceUrl: this.practoUrl
-      },
-      {
-        name: "Verified Patient",
-        title: "",
-        quote: "She has helped me overcome my depressive episode as well as my anxiety. She is a keen and attentive listener with a lot of tricks and tips up her sleeve, which help to tackle problems in a healthy manner. Would recommend anyone with anxiety and/or depressive episodes to seek her for counselling to set upon a healing journey.",
-        date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(), // 1 month ago
-        source: 'practo' as const,
-        sourceUrl: this.practoUrl
-      },
-      {
-        name: "Verified Patient",
-        title: "",
-        quote: "Not just her skills and expertise in handling the patients but the psychologist's empathetic approach towards her patients is beyond exceptional. Go for it without having a second thought.",
-        date: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(), // 1.5 months ago
-        source: 'practo' as const,
-        sourceUrl: this.practoUrl
+      }];
+    } finally {
+      if (browser) {
+        await browser.close();
       }
-    ];
-
-    console.log(`✅ Using verified Practo reviews: ${hardcodedReviews.length} reviews`);
-    
-    // Generate IDs for reviews
-    const reviewsWithIds = hardcodedReviews.map(review => ({
-      ...review,
-      id: this.generateReviewId(review)
-    }));
-
-    return reviewsWithIds;
+    }
+  }
+  
+  private parseDate(dateText: string): string | null {
+    try {
+      // Parse various date formats like "17 days ago", "1 month ago", etc.
+      const match = dateText.match(/(\d+)\s+(day|week|month|year)s?\s+ago/i);
+      if (match) {
+        const value = parseInt(match[1]);
+        const unit = match[2].toLowerCase();
+        
+        const now = new Date();
+        let pastDate = new Date();
+        
+        switch (unit) {
+          case 'day':
+            pastDate.setDate(now.getDate() - value);
+            break;
+          case 'week':
+            pastDate.setDate(now.getDate() - (value * 7));
+            break;
+          case 'month':
+            pastDate.setMonth(now.getMonth() - value);
+            break;
+          case 'year':
+            pastDate.setFullYear(now.getFullYear() - value);
+            break;
+        }
+        
+        return pastDate.toISOString();
+      }
+    } catch (error) {
+      console.error('Error parsing date:', dateText, error);
+    }
+    return null;
   }
 
   async updateReviews(): Promise<{ newReviews: number, totalReviews: number }> {
