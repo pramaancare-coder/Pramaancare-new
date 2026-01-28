@@ -1,11 +1,12 @@
 
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useRef } from "react";
+import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { contactFormSchema, type ContactFormValues } from "@/lib/schemas";
-import { createWeb3FormData } from "@/lib/web3form";
+import { handleContactForm, type FormState } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -21,18 +22,19 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
-import { Loader2, PartyPopper } from "lucide-react";
+import { Loader2, PartyPopper, AlertTriangle } from "lucide-react";
 
-function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
+function SubmitButton() {
+  const { pending } = useFormStatus();
   return (
     <Button 
         type="submit" 
         size="lg"
-        disabled={isSubmitting} 
+        disabled={pending} 
         className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full px-8"
         aria-label="Submit Form"
     >
-      {isSubmitting ? (
+      {pending ? (
         <Loader2 className="h-5 w-5 animate-spin" />
       ) : (
         "Submit"
@@ -52,9 +54,12 @@ const services = [
 
 export function ContactForm() {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const [formData, setFormData] = useState<ContactFormValues | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const [formState, formAction] = useActionState(handleContactForm, {
+    success: false,
+    message: "",
+  });
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
@@ -67,62 +72,52 @@ export function ContactForm() {
     },
   });
 
-  const onFormSubmit = async (data: ContactFormValues) => {
-    setIsSubmitting(true);
-    
-    try {
-      const web3FormData = createWeb3FormData(data, {
-        formType: 'contact',
-        submissionTime: new Date().toISOString(),
-        source: 'contact-form'
-      });
-
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        body: web3FormData,
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setFormData(data);
-        setFormSubmitted(true);
+  useEffect(() => {
+    if (formState.message) {
+      if (formState.success) {
         toast({
           title: "Success!",
-          description: "Your message has been sent successfully. We will contact you shortly.",
+          description: formState.message,
         });
+        form.reset();
+        formRef.current?.reset();
       } else {
-        throw new Error(result.message || 'Form submission failed');
+         // Only show toast for general server errors, not validation errors
+        if (formState.message.startsWith("Invalid form data")) return;
+        toast({
+          title: "Error",
+          description: formState.message,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Form submission error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
     }
+  }, [formState, toast, form]);
+
+  const onFormSubmit = (data: ContactFormValues) => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value) {
+        formData.append(key, String(value));
+      }
+    });
+    formAction(formData);
   };
   
-  const resetForm = () => {
-    setFormSubmitted(false);
-    setFormData(null);
-    form.reset();
-  };
-
-  if (formSubmitted && formData) {
+  if (formState.success) {
     return (
-      <Alert variant="default" className="bg-card">
+      <Alert variant={formState.isUrgent ? 'destructive' : 'default'} className="bg-card">
         <PartyPopper className="h-4 w-4" />
         <AlertTitle>Thank you!</AlertTitle>
         <AlertDescription>
           Your appointment request has been sent. <strong>We will contact you shortly</strong> to confirm your appointment details.
-          <div className="flex justify-center mt-4">
-            <Button onClick={resetForm} variant="outline">
-              Submit Another Request
-            </Button>
+          <div className="mt-4 text-sm bg-secondary/50 p-3 rounded-md">
+            <p className="font-bold text-sm lg:text-base xl:text-lg">AI Summary of your request:</p>
+            <p className="italic text-sm lg:text-base xl:text-lg">"{formState.summary}"</p>
+            {formState.isUrgent && (
+              <p className="mt-2 font-bold text-destructive flex items-center gap-2 text-sm lg:text-base xl:text-lg">
+                <AlertTriangle className="h-4 w-4" /> This has been flagged as urgent.
+              </p>
+            )}
           </div>
         </AlertDescription>
       </Alert>
@@ -133,6 +128,7 @@ export function ContactForm() {
     <div className="w-full">
       <Form {...form}>
         <form
+            ref={formRef}
             onSubmit={form.handleSubmit(onFormSubmit)}
             className="space-y-4"
             noValidate
@@ -144,7 +140,7 @@ export function ContactForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormControl>
-                    <Input {...field} placeholder="First Name" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
+                    <Input {...field} placeholder="First Name" required className="h-12 rounded-full" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -156,7 +152,7 @@ export function ContactForm() {
                 render={({ field }) => (
                 <FormItem>
                     <FormControl>
-                    <Input {...field} placeholder="Last Name" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
+                    <Input {...field} placeholder="Last Name" required className="h-12 rounded-full" />
                     </FormControl>
                     <FormMessage />
                 </FormItem>
@@ -171,7 +167,7 @@ export function ContactForm() {
                   render={({ field }) => (
                   <FormItem>
                       <FormControl>
-                      <Input {...field} placeholder="Email" type="email" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
+                      <Input {...field} placeholder="Email" type="email" required className="h-12 rounded-full" />
                       </FormControl>
                       <FormMessage />
                   </FormItem>
@@ -183,7 +179,7 @@ export function ContactForm() {
                   render={({ field }) => (
                   <FormItem>
                       <FormControl>
-                      <Input {...field} placeholder="Phone Number" type="tel" required className="h-12 rounded-full" autoComplete="off" list="autocompleteOff" />
+                      <Input {...field} placeholder="Phone Number" type="tel" required className="h-12 rounded-full" />
                       </FormControl>
                       <FormMessage />
                   </FormItem>
@@ -214,7 +210,7 @@ export function ContactForm() {
             />
             
             <div className="flex justify-end">
-              <SubmitButton isSubmitting={isSubmitting} />
+              <SubmitButton />
             </div>
         </form>
       </Form>

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useEffect, useRef, useState, startTransition } from "react";
+import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { contactFormSchema, type ContactFormValues } from "@/lib/schemas";
-import { createWeb3FormData } from "@/lib/web3form";
+import { handleContactForm } from "@/app/actions";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -28,16 +29,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
 import { Loader2, PartyPopper, Calendar } from "lucide-react";
 
-function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
+function SubmitButton() {
+  const { pending } = useFormStatus();
   return (
     <Button 
         type="submit" 
         size="lg"
-        disabled={isSubmitting} 
+        disabled={pending} 
         className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full px-8 w-full"
         aria-label="Submit Form"
     >
-      {isSubmitting ? (
+      {pending ? (
         <Loader2 className="h-5 w-5 animate-spin" />
       ) : (
         "Submit Request"
@@ -62,10 +64,13 @@ interface ContactFormPopupProps {
 
 export function ContactFormPopup({ trigger, triggerClassName }: ContactFormPopupProps) {
   const { toast } = useToast();
+  const formRef = useRef<HTMLFormElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  const [formData, setFormData] = useState<ContactFormValues | null>(null);
+
+  const [formState, formAction] = useActionState(handleContactForm, {
+    success: false,
+    message: "",
+  });
 
   const form = useForm<ContactFormValues>({
     resolver: zodResolver(contactFormSchema),
@@ -78,49 +83,41 @@ export function ContactFormPopup({ trigger, triggerClassName }: ContactFormPopup
     },
   });
 
-  const onFormSubmit = async (data: ContactFormValues) => {
-    setIsSubmitting(true);
-    
-    try {
-      const web3FormData = createWeb3FormData(data, {
-        formType: 'contact-popup',
-        submissionTime: new Date().toISOString(),
-        source: 'contact-form-popup'
-      });
-
-      const response = await fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        body: web3FormData,
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setFormData(data);
-        setFormSubmitted(true);
-        toast({
-          title: "Success!",
-          description: "Your message has been sent successfully. We will contact you shortly.",
-        });
+  useEffect(() => {
+    if (formState.message) {
+      if (formState.success) {
+        // Don't show toast for success, we'll show it in the dialog
+        // Keep dialog open to show success message
+        setIsOpen(true);
       } else {
-        throw new Error(result.message || 'Form submission failed');
+         // Only show toast for general server errors, not validation errors
+        if (formState.message.startsWith("Invalid form data")) return;
+        toast({
+          title: "Error",
+          description: formState.message,
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Form submission error:', error);
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
     }
+  }, [formState, toast]);
+
+  const onFormSubmit = (data: ContactFormValues) => {
+    const formData = new FormData();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value) {
+        formData.append(key, String(value));
+      }
+    });
+    
+    // Use startTransition to avoid the warning
+    startTransition(() => {
+      formAction(formData);
+    });
   };
 
   const resetForm = () => {
-    setFormSubmitted(false);
-    setFormData(null);
-    form.reset();
+    // Reload page to reset all form state
+    window.location.reload();
   };
   
   return (
@@ -129,7 +126,7 @@ export function ContactFormPopup({ trigger, triggerClassName }: ContactFormPopup
         {trigger}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        {formSubmitted && formData ? (
+        {formState.success ? (
           // Success state
           <>
             <DialogHeader>
@@ -145,13 +142,13 @@ export function ContactFormPopup({ trigger, triggerClassName }: ContactFormPopup
                 <p className="text-sm lg:text-base xl:text-lg">
                   Your appointment request has been sent. <strong>We will contact you shortly</strong> to confirm your appointment details.
                 </p>
-                <div className="flex justify-center mt-4">
-                  <Button onClick={resetForm} variant="outline">
-                    Submit Another Request
-                  </Button>
-                </div>
               </AlertDescription>
             </Alert>
+            <div className="flex justify-center mt-4">
+              <Button onClick={resetForm} variant="outline">
+                Submit Another Request
+              </Button>
+            </div>
           </>
         ) : (
           // Form state
@@ -169,6 +166,7 @@ export function ContactFormPopup({ trigger, triggerClassName }: ContactFormPopup
             <div className="w-full">
               <Form {...form}>
                 <form
+                    ref={formRef}
                     onSubmit={form.handleSubmit(onFormSubmit)}
                     className="space-y-4"
                     noValidate
@@ -250,7 +248,7 @@ export function ContactFormPopup({ trigger, triggerClassName }: ContactFormPopup
                 />
                 
                 <div className="flex justify-center mt-6">
-                  <SubmitButton isSubmitting={isSubmitting} />
+                  <SubmitButton />
                 </div>
             </form>
           </Form>
