@@ -1,11 +1,10 @@
 import useForm from "@web3forms/react";
 
-// Web3Form API key - Replace with your actual API key
 const WEB3FORMS_ACCESS_KEY = "f2d6b307-18c0-4f96-8579-b728dd911bf9";
 
 export interface Web3FormConfig {
   accessKey: string;
-  subject?: string;
+  subject?: string; 
   fromName?: string;
   emailTo?: string;
   replyTo?: string;
