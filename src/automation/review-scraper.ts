@@ -19,7 +19,7 @@ export class ReviewScraper {
 
   constructor() {
     this.dataPath = path.join(process.cwd(), 'src/data/reviews.json');
-    this.practoUrl = 'https://www.practo.com/gurgaon/therapist/prerna-sethi-psychotherapist/recommended';
+    this.practoUrl = 'https://www.practo.com/gurgaon/therapist/prerna-sethi-psychotherapist';
   }
 
   private async ensureDataFile(): Promise<void> {
@@ -85,13 +85,24 @@ export class ReviewScraper {
     
     let browser;
     try {
-      // Launch browser
+      // Launch browser with better configuration
       browser = await puppeteer.launch({
         headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--no-first-run',
+          '--no-zygote',
+          '--disable-gpu'
+        ]
       });
       
       const page = await browser.newPage();
+      
+      // Set user agent to look like a real browser
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
       
       // Navigate to the Practo reviews page
       await page.goto(this.practoUrl, { 
@@ -99,45 +110,99 @@ export class ReviewScraper {
         timeout: 30000 
       });
       
-      // Wait for reviews to load
-      await page.waitForSelector('.review-card, [data-testid="review-card"], .review-item', { timeout: 10000 });
+      // Wait a bit for the page to fully load
+      await new Promise(resolve => setTimeout(resolve, 3000));
       
-      // Extract reviews
+      // Extract reviews from the actual website
       const reviews = await page.evaluate(() => {
-        const reviewElements = document.querySelectorAll('.review-card, [data-testid="review-card"], .review-item, .review');
-        const extractedReviews = [];
+        const extractedReviews: any[] = [];
         
-        reviewElements.forEach((element, index) => {
-          try {
-            const nameElement = element.querySelector('.reviewer-name, .patient-name, .name, [data-testid="reviewer-name"]');
-            const titleElement = element.querySelector('.review-title, .title, [data-testid="review-title"]');
-            const quoteElement = element.querySelector('.review-text, .review-content, .description, [data-testid="review-text"]');
-            const dateElement = element.querySelector('.review-date, .date, .time-ago, [data-testid="review-date"]');
-            
-            if (nameElement && quoteElement) {
-              const name = nameElement.textContent?.trim() || 'Verified Patient';
-              const title = titleElement?.textContent?.trim() || '';
-              const quote = quoteElement.textContent?.trim() || '';
-              const dateText = dateElement?.textContent?.trim() || '';
+        // Try specific Practo review selectors
+        const reviewSelectors = [
+          '[data-qa="review"]',
+          '[data-testid="review"]',
+          '.review-card',
+          '.review-item',
+          '.feedback-card',
+          '.testimonial-card',
+          '.patient-review',
+          '.doctor-review',
+          '.rating-review',
+          '.review-section',
+          '.feedback-section'
+        ];
+        
+        // Try each selector
+        for (const selector of reviewSelectors) {
+          const elements = document.querySelectorAll(selector);
+          console.log(`Found ${elements.length} elements with selector: ${selector}`);
+          
+          elements.forEach((element) => {
+            try {
+              const text = element.textContent?.trim() || '';
               
-              if (quote && quote.length > 20) { // Only include meaningful reviews
+              if (text.length > 50 && text.length < 2000) {
+                // Look for review patterns
+                if (text.includes('Dr.') || text.includes('Prerna') || 
+                    text.includes('experience') || text.includes('treatment') ||
+                    text.includes('helped') || text.includes('good') ||
+                    text.includes('excellent') || text.includes('recommend')) {
+                  
+                  // Try to extract structured data
+                  const nameEl = element.querySelector('.name, .patient-name, .reviewer-name, [data-qa="reviewer-name"]');
+                  const ratingEl = element.querySelector('.rating, .stars, [data-qa="rating"]');
+                  const dateEl = element.querySelector('.date, .time, [data-qa="date"]');
+                  const textEl = element.querySelector('.text, .review-text, .feedback-text, [data-qa="review-text"]');
+                  
+                  const name = nameEl?.textContent?.trim() || 'Verified Patient';
+                  const reviewText = textEl?.textContent?.trim() || text;
+                  const dateText = dateEl?.textContent?.trim() || '';
+                  
+                  if (reviewText.length > 30) {
+                    extractedReviews.push({
+                      name,
+                      title: 'Patient Review',
+                      quote: reviewText,
+                      dateText
+                    });
+                  }
+                }
+              }
+            } catch (error) {
+              console.error('Error processing element:', error);
+            }
+          });
+        }
+        
+        // If no structured reviews found, try generic approach
+        if (extractedReviews.length === 0) {
+          console.log('No structured reviews found, trying generic approach...');
+          
+          // Look for any text that might be reviews
+          const allTextElements = document.querySelectorAll('p, div, span');
+          allTextElements.forEach((element) => {
+            const text = element.textContent?.trim() || '';
+            
+            if (text.length > 100 && text.length < 1000) {
+              if (text.includes('Dr. Prerna') || 
+                  (text.includes('Prerna') && (text.includes('therapy') || text.includes('session') || text.includes('treatment')))) {
+                
                 extractedReviews.push({
-                  name,
-                  title,
-                  quote,
-                  dateText
+                  name: 'Verified Patient',
+                  title: 'Patient Review',
+                  quote: text,
+                  dateText: 'Recently'
                 });
               }
             }
-          } catch (error) {
-            console.error('Error extracting review:', error);
-          }
-        });
+          });
+        }
         
-        return extractedReviews;
+        console.log(`Total extracted reviews: ${extractedReviews.length}`);
+        return extractedReviews.slice(0, 6);
       });
       
-      console.log(`Found ${reviews.length} reviews from Practo`);
+      console.log(`Found ${reviews.length} reviews from Practo website`);
       
       // Convert to our Review format
       const formattedReviews = reviews.map((review, index) => ({
@@ -150,23 +215,15 @@ export class ReviewScraper {
         sourceUrl: this.practoUrl
       }));
       
-      console.log(`✅ Successfully scraped ${formattedReviews.length} reviews from Practo`);
+      console.log(`✅ Successfully scraped ${formattedReviews.length} reviews from Practo website`);
       return formattedReviews;
       
     } catch (error) {
       console.error('Error scraping Practo reviews:', error);
       
-      // Fallback to minimal hardcoded data if scraping fails
-      console.log('⚠️ Using fallback reviews due to scraping failure');
-      return [{
-        id: 'practo-fallback',
-        name: 'Verified Patient',
-        title: 'Exceptional Service',
-        quote: 'Dr. Prerna provides excellent psychological care with compassion and expertise.',
-        date: new Date().toISOString(),
-        source: 'practo' as const,
-        sourceUrl: this.practoUrl
-      }];
+      // Return empty array if scraping fails (no static fallback)
+      console.log('⚠️ Real scraping failed, returning empty array');
+      return [];
     } finally {
       if (browser) {
         await browser.close();
@@ -236,7 +293,25 @@ export class ReviewScraper {
   }
 
   async getAllReviews(): Promise<Review[]> {
-    const { reviews, manualReviews } = await this.loadExistingReviews();
-    return [...manualReviews, ...reviews];
+    try {
+      // Always fetch fresh data from Practo scraping
+      console.log('🔄 Fetching fresh reviews from Practo...');
+      const freshReviews = await this.scrapePractoReviews();
+      
+      // Return fresh reviews directly (no manual reviews needed)
+      return freshReviews;
+    } catch (error) {
+      console.error('Error fetching fresh reviews, falling back to stored data:', error);
+      
+      // Fallback to stored data if scraping fails
+      try {
+        const { reviews, manualReviews } = await this.loadExistingReviews();
+        return [...manualReviews, ...reviews];
+      } catch (fallbackError) {
+        console.error('Error loading stored data:', fallbackError);
+        // Return empty array if both fail
+        return [];
+      }
+    }
   }
 }

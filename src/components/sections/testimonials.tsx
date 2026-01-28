@@ -8,39 +8,7 @@ import { sectionVariants } from "@/lib/animations";
 import { useReviews } from "@/hooks/use-reviews";
 import { ExternalLink } from "lucide-react";
 
-// Fallback testimonials in case API fails
-const fallbackTestimonials = [
-  {
-    quote: "Working with Pramaan Care was a transformative experience. I felt truly heard and supported, and gained tools that have improved my life immeasurably.",
-    name: "A. Sharma",
-    title: "Individual Client",
-  },
-  {
-    quote: "The corporate wellness workshop was fantastic. Our team is more open and supportive, and we've seen a real shift in our company culture.",
-    name: "R. Gupta",
-    title: "HR Manager",
-  },
-  {
-    quote: "I was hesitant about therapy, but the team at Pramaan Care made me feel comfortable from day one. It's one of the best investments I've ever made in myself.",
-    name: "S. Khan",
-    title: "Individual Client",
-  },
-   {
-    quote: "The assessments provided much-needed clarity on my career path. I feel more confident and aligned with my professional goals now.",
-    name: "P. Mehta",
-    title: "Assessment Client",
-  },
-  {
-    quote: "Family therapy helped us communicate better and understand each other on a deeper level. Our home is a much more peaceful place now.",
-    name: "The Verma Family",
-    title: "Family Therapy Clients",
-  },
-  {
-    quote: "The leadership training on mental wellbeing was insightful and practical. I feel better equipped to support my team's mental health.",
-    name: "J. Singh",
-    title: "Corporate Client",
-  },
-];
+// No static fallback - only use real API data
 
 // Utility function to truncate text
 const truncateText = (text: string, maxLength: number = 280): { truncated: string; isTruncated: boolean } => {
@@ -77,15 +45,39 @@ const ReviewCard = ({
   title,
   quote,
   source,
-  sourceUrl
+  sourceUrl,
+  date
 }: {
   name: string;
   title: string;
   quote: string;
   source?: string;
   sourceUrl?: string;
+  date?: string;
 }) => {
   const { truncated, isTruncated } = truncateText(quote);
+  
+  // Format date to "time ago" format
+  const formatTimeAgo = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return '1 day ago';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return weeks === 1 ? '1 week ago' : `${weeks} weeks ago`;
+    }
+    if (diffDays < 365) {
+      const months = Math.floor(diffDays / 30);
+      return months === 1 ? '1 month ago' : `${months} months ago`;
+    }
+    const years = Math.floor(diffDays / 365);
+    return years === 1 ? '1 year ago' : `${years} years ago`;
+  };
   
   return (
     <figure
@@ -100,9 +92,14 @@ const ReviewCard = ({
             {name}
           </figcaption>
           <p className="text-xs font-medium text-muted-foreground">{title}</p>
-          {source === 'practo' && (
-            <p className="text-xs text-blue-600 font-medium">Via Practo</p>
-          )}
+          <div className="flex items-center gap-2">
+            {date && (
+              <p className="text-xs text-gray-500">{formatTimeAgo(date)}</p>
+            )}
+            {source === 'practo' && (
+              <p className="text-xs text-blue-600 font-medium">Via Practo</p>
+            )}
+          </div>
         </div>
       </div>
       <blockquote className="text-sm text-muted-foreground leading-relaxed flex-1">
@@ -128,14 +125,40 @@ const ReviewCard = ({
 export function Testimonials() {
   const { reviews, loading, error } = useReviews();
   
-  // Use dynamic reviews if available, otherwise fallback to static ones
-  const testimonials = reviews.length > 0 ? reviews.map(review => ({
+  // Only use real API data - no fallback
+  const testimonials = reviews.map(review => ({
     quote: review.quote,
     name: review.name,
     title: review.title,
     source: review.source,
-    sourceUrl: review.sourceUrl
-  })) : fallbackTestimonials;
+    sourceUrl: review.sourceUrl,
+    date: review.date
+  }));
+
+  // Show empty state if no reviews
+  if (testimonials.length === 0 && !loading) {
+    return (
+      <motion.section
+        id="testimonials"
+        className="w-full mt-10 md:mt-[100px]"
+        variants={sectionVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+      >
+        <div className="w-[96%] mx-auto px-6">
+          <div className="flex flex-col items-center text-center space-y-4 mb-12">
+            <h2 className="font-headline text-foreground font-bold">
+              What Our Clients Say
+            </h2>
+            <p className="max-w-2xl text-muted-foreground text-sm lg:text-base xl:text-lg">
+              No reviews available at the moment.
+            </p>
+          </div>
+        </div>
+      </motion.section>
+    );
+  }
 
   const firstRow = testimonials.slice(0, Math.ceil(testimonials.length / 2));
   const secondRow = testimonials.slice(Math.ceil(testimonials.length / 2));
