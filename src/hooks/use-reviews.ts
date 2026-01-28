@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Review } from '@/automation/review-scraper';
+import { Review } from '@/types/review';
 
 export function useReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);

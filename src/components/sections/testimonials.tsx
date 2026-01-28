@@ -164,6 +164,10 @@ export function Testimonials() {
     );
   }
 
+  if (error) {
+    console.error('Testimonials Error:', error);
+  }
+
   return (
     <motion.section
       id="testimonials"
