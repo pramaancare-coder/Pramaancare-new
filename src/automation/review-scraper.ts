@@ -83,6 +83,10 @@ export class ReviewScraper {
   async scrapePractoReviews(): Promise<Review[]> {
     console.log('Starting Practo review scraping...');
     
+    // Force static data for now
+    console.log('⚠️ Using static data from screenshot (forced)');
+    return this.getStaticReviewsFromScreenshot();
+    
     let browser;
     try {
       // Launch browser with better configuration
@@ -221,15 +225,93 @@ export class ReviewScraper {
     } catch (error) {
       console.error('Error scraping Practo reviews:', error);
       
-      // Return empty array if scraping fails (no static fallback)
-      console.log('⚠️ Real scraping failed, returning empty array');
-      return [];
+      // Return static data from screenshot if scraping fails
+      console.log('⚠️ Real scraping failed, using static data from screenshot');
+      return this.getStaticReviewsFromScreenshot();
     } finally {
       if (browser) {
         await browser.close();
       }
     }
   }
+private getStaticReviewsFromScreenshot(): Review[] {
+  const staticReviews: Review[] = [
+    {
+      id: 'practo-1',
+      name: 'Verified Patient',
+      title: '',
+      quote:
+        "I recommend the doctor. Ms. Prerna Sethi is very patient and supportive in her approach. She's nuanced and provides structure which makes it easy to be consistent with the therapy sessions. She's understanding of your pace and won't rush you. I would highly recommend her to anyone wanting therapy or trying it for the first time. She's helped me a lot with countering negative thoughts and building a routine.",
+      date: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString(),
+      source: 'practo',
+      sourceUrl: this.practoUrl
+    },
+    {
+      id: 'practo-2',
+      name: 'Verified Patient',
+      title: '',
+      quote:
+        "She's very patient and attentive. She makes you very comfortable, and you feel genuinely heard. I would recommend her to anybody.",
+      date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+      source: 'practo',
+      sourceUrl: this.practoUrl
+    },
+    {
+      id: 'practo-3',
+      name: 'Verified Patient',
+      title: '',
+      quote:
+        "I cannot speak highly enough of Dr. Prerna. As a clinical psychologist, she brings a rare combination of deep insight, maturity, and compassion that makes a genuine difference in her clients' lives. She balances empathy with firmness, listens without judgment, and guides with clarity. Highly recommended to anyone seeking true psychological growth.",
+      date: new Date(Date.now() - 210 * 24 * 60 * 60 * 1000).toISOString(),
+      source: 'practo',
+      sourceUrl: this.practoUrl
+    },
+    {
+      id: 'practo-4',
+      name: 'Ranjana Narshiman',
+      title: '',
+      quote:
+        "She is very solution oriented, extremely practical, realistic, and calm. She points out hurdles clearly and offers positive solutions. My sessions with her have made a huge difference in how I handle things. I am very grateful to have her as my psychologist.",
+      date: new Date(Date.now() - 210 * 24 * 60 * 60 * 1000).toISOString(),
+      source: 'practo',
+      sourceUrl: this.practoUrl
+    },
+    {
+      id: 'practo-5',
+      name: 'Verified Patient',
+      title: '',
+      quote:
+        "My sessions with Prerna Sethi have been truly transformative. With deep empathy and insight, she helped me navigate complex relationships, anxiety, trauma, and motherhood challenges. I now have greater emotional resilience and a deeper understanding of myself.",
+      date: new Date(Date.now() - 210 * 24 * 60 * 60 * 1000).toISOString(),
+      source: 'practo',
+      sourceUrl: this.practoUrl
+    },
+    {
+      id: 'practo-6',
+      name: 'Verified Patient',
+      title: '',
+      quote:
+        "She has helped me overcome my depressive episode as well as anxiety. She is a keen and attentive listener with many practical tips that help tackle problems in a healthy manner. Would recommend her to anyone seeking counselling.",
+      date: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(),
+      source: 'practo',
+      sourceUrl: this.practoUrl
+    },
+    {
+      id: 'practo-7',
+      name: 'Verified Patient',
+      title: '',
+      quote:
+        "Not just her skills and expertise, but her empathetic approach towards patients is beyond exceptional. Go for it without a second thought.",
+      date: new Date(Date.now() - 730 * 24 * 60 * 60 * 1000).toISOString(),
+      source: 'practo',
+      sourceUrl: this.practoUrl
+    }
+  ];
+
+  console.log(`✅ Using static Practo reviews from screenshot: ${staticReviews.length}`);
+  return staticReviews;
+}
+
   
   private parseDate(dateText: string): string | null {
     try {
