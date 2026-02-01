@@ -1,183 +1,467 @@
 "use client";
 
-import { MapPin, Video, Clock, Shield, ArrowRight, Phone } from "lucide-react";
-import { motion } from "framer-motion";
-import { sectionVariants } from "@/lib/animations";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { consultationFormSchema, type ConsultationFormValues } from "@/lib/schemas";
+import { createWeb3FormData } from "@/lib/web3form";
+import { useToast } from "@/hooks/use-toast";
+
 import { Button } from "@/components/ui/button";
-import { ConsultationFormPopup } from "@/components/consultation-form-popup";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Loader2, PartyPopper, Calendar, Video, MapPin } from "lucide-react";
 
-export function ConsultationModes() {
+function SubmitButton({ isSubmitting }: { isSubmitting: boolean }) {
   return (
-    <motion.section
-      className="w-full mt-10 md:mt-[100px] relative overflow-hidden"
-      variants={sectionVariants}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.1 }}
+    <Button 
+        type="submit" 
+        size="lg"
+        disabled={isSubmitting} 
+        className="bg-primary/90 hover:bg-primary text-primary-foreground rounded-full px-8 w-full"
+        aria-label="Submit Form"
     >
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div className="absolute top-20 left-10 w-32 h-32 border border-primary rounded-full"></div>
-        <div className="absolute bottom-20 right-10 w-24 h-24 border border-primary rounded-full"></div>
-        <div className="absolute top-1/2 left-1/3 w-16 h-16 border border-primary rounded-full"></div>
-      </div>
-
-      <div className="w-full px-[14px] md:w-[96%] md:mx-auto md:px-6 py-0 md:py-12 relative">
-        {/* Header */}
-        <div className="text-center mb-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
-            <h2 className="font-headline font-bold text-foreground text-3xl md:text-4xl mb-4">
-              How We Connect
-            </h2>
-            <p className="max-w-2xl mx-auto text-muted-foreground text-sm lg:text-base xl:text-lg">
-              Choose the consultation mode that works best for you. Professional care delivered through multiple channels.
-            </p>
-          </motion.div>
-        </div>
-
-  {/* Main Content Layout */}
-  <div className="grid lg:grid-cols-2 gap-10 items-stretch">
-          
-          {/* Left Side - In-Person Locations */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            viewport={{ once: true }}
-            className="space-y-6 h-full flex flex-col justify-between"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <h3 className="font-headline text-2xl font-bold text-foreground">In-Person Sessions</h3>
-            </div>
-
-            {/* Location Cards */}
-            <div className="space-y-4">
-              <div className="group bg-background border border-border rounded-xl p-5 hover:border-primary/30 transition-all duration-300 hover:shadow-md">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-foreground text-lg mb-2">Gurgaon</h4>
-                    <p className="text-muted-foreground text-sm lg:text-base xl:text-lg mb-3">
-                      Face-to-face counselling with our RCI-registered Clinical Psychologist in a private, comfortable setting.
-                    </p>
-                    <div className="flex items-center gap-2 text-primary font-medium">
-                      <Clock className="h-4 w-4" />
-                      <span className="text-xs">Flexible scheduling available</span>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-              </div>
-
-              <div className="group bg-background border border-border rounded-xl p-5 hover:border-primary/30 transition-all duration-300 hover:shadow-md">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-semibold text-foreground text-lg mb-2">East of Kailash, Delhi NCR</h4>
-                    <p className="text-muted-foreground text-sm lg:text-base xl:text-lg mb-3">
-                      Convenient access to professional mental health care in our Delhi NCR location.
-                    </p>
-                    <div className="flex items-center gap-2 text-primary font-medium">
-                      <Shield className="h-4 w-4" />
-                      <span className="text-xs">Confidential environment</span>
-                    </div>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Right Side - Online Consultation */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            viewport={{ once: true }}
-            className="relative h-full"
-          >
-            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl p-6 lg:p-8 border border-primary/20 h-full flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center">
-                  <Video className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <h3 className="font-headline text-2xl font-bold text-foreground">Online Counselling</h3>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-muted-foreground text-sm lg:text-base xl:text-lg leading-relaxed">
-                  Secure virtual therapy sessions available across India and internationally. Experience quality care from your own space.
-                </p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="text-center p-3 bg-background/50 rounded-lg border border-primary/10">
-                    <div className="text-xl font-bold text-foreground mb-1">India</div>
-                    <div className="text-xs text-muted-foreground">Nationwide</div>
-                  </div>
-                  <div className="text-center p-3 bg-background/50 rounded-lg border border-primary/10">
-                    <div className="text-xl font-bold text-foreground mb-1">Global</div>
-                    <div className="text-xs text-muted-foreground">International</div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground text-xs">End-to-end encrypted sessions</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground text-xs">Secure video platform</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
-                    <span className="text-muted-foreground text-xs">Flexible time zones</span>
-                  </div>
-                </div>
-
-                <ConsultationFormPopup
-                  trigger={
-                    <Button className="w-full mt-4" size="default">
-                      <Phone className="h-4 w-4 mr-2" />
-                      Schedule Consultation
-                    </Button>
-                  }
-                />
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Bottom Trust Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          viewport={{ once: true }}
-          className="mt-10 pt-6 border-t border-border/50"
-        >
-          <div className="flex flex-col md:flex-row items-center justify-center gap-6 text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium">RCI Registered Psychologist</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium">Flexible Scheduling</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Video className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium">Secure & Confidential</span>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    </motion.section>
+      {isSubmitting ? (
+        <Loader2 className="h-5 w-5 animate-spin" />
+      ) : (
+        "Schedule Consultation"
+      )}
+    </Button>
   );
 }
+
+const services = [
+  "Individual Therapy",
+  "Couples Counseling",
+  "Family Therapy",
+  "Teen Counseling",
+  "Psychological Assessment",
+  "Corporate EAP",
+];
+
+const consultationTypes = [
+  { value: "in-person", label: "In-Person Consultation", icon: MapPin },
+  { value: "online", label: "Online Consultation", icon: Video },
+];
+
+interface ConsultationFormProps {
+  trigger?: React.ReactNode;
+  triggerClassName?: string;
+  variant?: 'popup' | 'inline';
+}
+
+export function ConsultationForm({ trigger, triggerClassName, variant = 'popup' }: ConsultationFormProps) {
+  const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [formData, setFormData] = useState<ConsultationFormValues | null>(null);
+
+  const form = useForm<ConsultationFormValues>({
+    resolver: zodResolver(consultationFormSchema),
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      email: "",
+      phone: "",
+      service: "",
+      consultationType: "",
+    },
+  });
+
+  const onFormSubmit = async (data: ConsultationFormValues) => {
+    setIsSubmitting(true);
+    
+    try {
+      const web3FormData = createWeb3FormData(data, {
+        formType: 'consultation',
+        submissionTime: new Date().toISOString(),
+        source: variant === 'popup' ? 'consultation-popup' : 'consultation-inline'
+      });
+
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        body: web3FormData,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setFormData(data);
+        setFormSubmitted(true);
+        toast({
+          title: "Success!",
+          description: "Your consultation request has been sent successfully. We will contact you shortly.",
+        });
+        if (variant === 'popup') {
+          setIsOpen(true);
+        }
+      } else {
+        throw new Error(result.message || 'Form submission failed');
+      }
+    } catch (error) {
+      console.error('Form submission error:', error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormSubmitted(false);
+    setFormData(null);
+    form.reset();
+  };
+
+  // Popup variant - render success or form content within Dialog
+  if (variant === 'popup') {
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild className={triggerClassName}>
+          {trigger}
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          {formSubmitted && formData ? (
+            // Success state
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <PartyPopper className="h-5 w-5 text-primary" />
+                  Consultation Scheduled!
+                </DialogTitle>
+              </DialogHeader>
+              <Alert className="bg-card">
+                <Calendar className="h-4 w-4" />
+                <AlertTitle>Request Received Successfully</AlertTitle>
+                <AlertDescription>
+                  <p className="text-sm lg:text-base xl:text-lg">
+                    Your consultation request has been submitted. <strong>We will contact you shortly</strong> to confirm your preferred time and consultation details.
+                  </p>
+                  <div className="flex justify-center mt-4">
+                    <Button onClick={resetForm} variant="outline">
+                      Schedule Another Consultation
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </>
+          ) : (
+            // Form state
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Calendar className="h-5 w-5 text-primary" />
+                  Schedule Your Consultation
+                </DialogTitle>
+                <DialogDescription>
+                  Choose your preferred consultation method and we'll contact you shortly to confirm the details.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="w-full">
+                <Form {...form}>
+                  <form
+                      onSubmit={form.handleSubmit(onFormSubmit)}
+                      className="space-y-4"
+                      noValidate
+                  >
+                    {/* First Name and Last Name */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="firstName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                            <Input {...field} placeholder="First Name" required className="h-12 rounded-full" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="lastName"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                            <Input {...field} placeholder="Last Name" required className="h-12 rounded-full" />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormControl>
+                              <Input {...field} placeholder="Email" type="email" required className="h-12 rounded-full" />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                      <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                          <FormItem>
+                              <FormControl>
+                              <Input {...field} placeholder="Phone Number" type="tel" required className="h-12 rounded-full" />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                          )}
+                      />
+                    </div>
+                    
+                    <FormField
+                        control={form.control}
+                        name="service"
+                        render={({ field }) => (
+                        <FormItem>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger className="h-12 rounded-full">
+                                    <SelectValue placeholder="Select a service" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {services.map(service => (
+                                    <SelectItem key={service} value={service}>{service}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+
+                    {/* Consultation Type Selection */}
+                    <FormField
+                        control={form.control}
+                        name="consultationType"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel className="text-sm font-medium">Consultation Type</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                <SelectTrigger className="h-12 rounded-full">
+                                    <SelectValue placeholder="Choose consultation type" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {consultationTypes.map(type => {
+                                    const IconComponent = type.icon;
+                                    return (
+                                    <SelectItem key={type.value} value={type.value}>
+                                        <div className="flex items-center gap-2">
+                                        <IconComponent className="h-4 w-4" />
+                                        {type.label}
+                                        </div>
+                                    </SelectItem>
+                                    );
+                                })}
+                                </SelectContent>
+                            </Select>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    
+                    <div className="flex justify-center mt-6">
+                      <SubmitButton isSubmitting={isSubmitting} />
+                    </div>
+                </form>
+              </Form>
+            </div>
+          </>
+          )}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Inline variant - show success or form
+  if (formSubmitted && formData) {
+    return (
+      <div className="space-y-6">
+        <Alert className="bg-card">
+          <Calendar className="h-4 w-4" />
+          <AlertTitle className="flex items-center gap-2">
+            <PartyPopper className="h-5 w-5 text-primary" />
+            Consultation Scheduled!
+          </AlertTitle>
+          <AlertDescription>
+            <p className="text-sm lg:text-base xl:text-lg">
+              Your consultation request has been submitted. <strong>We will contact you shortly</strong> to confirm your preferred time and consultation details.
+            </p>
+          </AlertDescription>
+        </Alert>
+        <div className="flex justify-center">
+          <Button onClick={resetForm} variant="outline">
+            Schedule Another Consultation
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+    return (
+      <div className="w-full">
+        <Form {...form}>
+          <form
+              onSubmit={form.handleSubmit(onFormSubmit)}
+              className="space-y-6"
+              noValidate
+          >
+            {/* First Name and Last Name */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="text-sm font-medium">First Name</FormLabel>
+                    <FormControl>
+                    <Input {...field} placeholder="First Name" required className="h-12 rounded-full" />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="text-sm font-medium">Last Name</FormLabel>
+                    <FormControl>
+                    <Input {...field} placeholder="Last Name" required className="h-12 rounded-full" />
+                    </FormControl>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel className="text-sm font-medium">Email</FormLabel>
+                      <FormControl>
+                      <Input {...field} placeholder="Email" type="email" required className="h-12 rounded-full" />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
+              <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                  <FormItem>
+                      <FormLabel className="text-sm font-medium">Phone Number</FormLabel>
+                      <FormControl>
+                      <Input {...field} placeholder="Phone Number" type="tel" required className="h-12 rounded-full" />
+                      </FormControl>
+                      <FormMessage />
+                  </FormItem>
+                  )}
+              />
+            </div>
+            
+            <FormField
+                control={form.control}
+                name="service"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="text-sm font-medium">Service</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger className="h-12 rounded-full">
+                            <SelectValue placeholder="Select a service" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {services.map(service => (
+                            <SelectItem key={service} value={service}>{service}</SelectItem>
+                        ))}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+
+            {/* Consultation Type Selection */}
+            <FormField
+                control={form.control}
+                name="consultationType"
+                render={({ field }) => (
+                <FormItem>
+                    <FormLabel className="text-sm font-medium">Consultation Type</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                        <SelectTrigger className="h-12 rounded-full">
+                            <SelectValue placeholder="Choose consultation type" />
+                        </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                        {consultationTypes.map(type => {
+                            const IconComponent = type.icon;
+                            return (
+                            <SelectItem key={type.value} value={type.value}>
+                                <div className="flex items-center gap-2">
+                                <IconComponent className="h-4 w-4" />
+                                {type.label}
+                                </div>
+                            </SelectItem>
+                            );
+                        })}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )}
+            />
+            
+            <div className="flex justify-center mt-6">
+              <SubmitButton isSubmitting={isSubmitting} />
+            </div>
+          </form>
+        </Form>
+      </div>
+    );
+}
+
+// Backward compatibility alias
+export const ConsultationFormPopup = ConsultationForm;
