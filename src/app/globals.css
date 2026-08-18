@@ -1,0 +1,258 @@
+img {
+  border-radius: 20px !important;
+}
+img.logo-image {
+  border-radius: 0 !important;
+}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Lenis Smooth Scroll */
+html.lenis {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 191 79% 37%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 48 83% 95%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+    --chart-1: 191 79% 37%;
+    --chart-2: 191 79% 47%;
+    --chart-3: 191 79% 57%;
+    --chart-4: 191 79% 67%;
+    --chart-5: 191 79% 77%;
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .animate-marquee {
+    animation: marquee var(--duration) linear infinite;
+  }
+  .animate-marquee-vertical {
+    animation: marquee-vertical var(--duration) linear infinite;
+  }
+  .animate-slideInUp {
+    animation: slideInUp 0.4s ease-out forwards;
+  }
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes marquee-vertical {
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(calc(-100% - var(--gap)));
+    }
+  }
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+
+/* Industry Standard Responsive Typography */
+h1, .h1 {
+  font-size: 2rem; /* 32px - Mobile */
+  line-height: 1.2;
+  font-weight: 700;
+}
+h2, .h2 {
+  font-size: 1.75rem; /* 28px - Mobile */
+  line-height: 1.3;
+  font-weight: 600;
+}
+h3, .h3 {
+  font-size: 1.5rem; /* 24px - Mobile */
+  line-height: 1.3;
+  font-weight: 600;
+}
+h4, .h4 {
+  font-size: 1.25rem; /* 20px - Mobile */
+  line-height: 1.4;
+  font-weight: 600;
+}
+h5, .h5 {
+  font-size: 1.125rem; /* 18px - Mobile */
+  line-height: 1.4;
+  font-weight: 500;
+}
+h6, .h6 {
+  font-size: 1rem; /* 16px - Mobile */
+  line-height: 1.5;
+  font-weight: 500;
+}
+p, .p {
+  font-size: 1rem; /* 16px - Mobile */
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* Tablet and larger screens */
+@media (min-width: 768px) {
+  h1, .h1 {
+    font-size: 2.5rem; /* 40px - Tablet */
+  }
+  h2, .h2 {
+    font-size: 2rem; /* 32px - Tablet */
+  }
+  h3, .h3 {
+    font-size: 1.75rem; /* 28px - Tablet */
+  }
+  h4, .h4 {
+    font-size: 1.5rem; /* 24px - Tablet */
+  }
+  h5, .h5 {
+    font-size: 1.25rem; /* 20px - Tablet */
+  }
+  h6, .h6 {
+    font-size: 1.125rem; /* 18px - Tablet */
+  }
+  p, .p {
+    font-size: 1.125rem; /* 18px - Tablet */
+  }
+}
+
+/* Desktop and larger screens */
+@media (min-width: 1024px) {
+  h1, .h1 {
+    font-size: 3rem; /* 48px - Desktop */
+  }
+  h2, .h2 {
+    font-size: 2.5rem; /* 40px - Desktop */
+  }
+  h3, .h3 {
+    font-size: 2rem; /* 32px - Desktop */
+  }
+  h4, .h4 {
+    font-size: 1.75rem; /* 28px - Desktop */
+  }
+  h5, .h5 {
+    font-size: 1.5rem; /* 24px - Desktop */
+  }
+  h6, .h6 {
+    font-size: 1.25rem; /* 20px - Desktop */
+  }
+  p, .p {
+    font-size: 1.125rem; /* 18px - Desktop */
+  }
+}
+
+/* Large desktop screens */
+@media (min-width: 1440px) {
+  h1, .h1 {
+    font-size: 3.5rem; /* 56px - Large Desktop */
+  }
+  h2, .h2 {
+    font-size: 3rem; /* 48px - Large Desktop */
+  }
+  h3, .h3 {
+    font-size: 2.25rem; /* 36px - Large Desktop */
+  }
+  h4, .h4 {
+    font-size: 2rem; /* 32px - Large Desktop */
+  }
+  h5, .h5 {
+    font-size: 1.5rem; /* 24px - Large Desktop */
+  }
+  h6, .h6 {
+    font-size: 1.25rem; /* 20px - Large Desktop */
+  }
+  p, .p {
+    font-size: 1.125rem; /* 18px - Large Desktop */
+  }
+}
+
+/* Section spacing: ensure consistent 120px gap between sections */
+section {
+  margin-top: 120px !important;
+  margin-bottom: 0;
+  /* help anchored links scroll to visible area when header is sticky */
+  scroll-margin-top: 120px;
+}
+section:first-of-type {
+  margin-top: 0 !important;
+}
+
+/* Performance optimizations */
+@media (max-width: 768px) {
+  .marquee-container {
+    will-change: transform;
+    transform: translateZ(0);
+  }
+  
+  .hero-image {
+    content-visibility: auto;
+    contain-intrinsic-size: 400px;
+  }
+}
+
+/* Dialog scroll fix */
+[data-radix-dialog-content] {
+  overflow-y: auto !important;
+  max-height: 90vh !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+[data-radix-dialog-content] * {
+  touch-action: auto !important;
+  overscroll-behavior: auto !important;
+}
+
+/* Force scrolling on dialog portals */
+[data-radix-portal] [data-radix-dialog-content] {
+  overflow-y: scroll !important;
+}

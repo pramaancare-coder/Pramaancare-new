@@ -1,0 +1,49 @@
+/* Critical CSS optimizations */
+
+/* Critical font declarations */
+.font-headline { font-family: 'Forum', serif; }
+.font-body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+/* Reduce layout shifts */
+.image-container {
+  aspect-ratio: attr(width) / attr(height);
+}
+
+/* Optimize animations for performance */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* GPU acceleration for smooth animations */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Optimize font loading */
+@font-face {
+  font-family: 'Forum';
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-display: swap;
+}
+
+/* Reduce repaints */
+.no-repaint {
+  contain: layout style paint;
+}
+
+/* Optimize scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
