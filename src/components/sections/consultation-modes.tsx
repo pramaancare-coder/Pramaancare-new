@@ -79,7 +79,7 @@ export function ConsultationModes() {
               <div className="group bg-background border border-border rounded-xl p-5 hover:border-primary/30 transition-all duration-300 hover:shadow-md">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-foreground text-lg mb-2">Vasant Kunj, 281, Sector A, Pocket C, Delhi NCR</h4>
+                    <h4 className="font-semibold text-foreground text-lg mb-2">Vasant Kunj</h4>
                     <p className="text-muted-foreground text-sm lg:text-base xl:text-lg mb-3">
                       Convenient access to professional mental health care in our Delhi NCR location.
                     </p>
